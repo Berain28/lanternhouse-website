@@ -145,61 +145,47 @@
   }
 
   /* ---------- nav scroll state ---------- */
-  function syncNavHeight() {
-    const nav = document.querySelector(".nav");
-    if (!nav) return;
-    document.documentElement.style.setProperty("--nav-h", `${nav.offsetHeight}px`);
-  }
-
   function initNav() {
     const nav = document.querySelector(".nav");
     if (!nav) return;
 
-    syncNavHeight();
-    window.addEventListener("resize", syncNavHeight, { passive: true });
-
+    // Insert a sibling backdrop the drawer can sit above. Sibling rather
+    // than child so .nav's stacking context doesn't trap it.
+    let backdrop = document.querySelector(".nav-backdrop");
+    if (!backdrop) {
+      backdrop = document.createElement("div");
+      backdrop.className = "nav-backdrop";
+      nav.insertAdjacentElement("afterend", backdrop);
+    }
     const onScroll = () => {
       nav.classList.toggle("is-scrolled", window.scrollY > 8);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
 
-    // mobile toggle
+    // mobile toggle — keep the body scroll locked while open
     const toggle = nav.querySelector(".nav-toggle");
-    let backdrop = nav.querySelector(".nav-backdrop");
-    if (!backdrop) {
-      backdrop = document.createElement("button");
-      backdrop.type = "button";
-      backdrop.className = "nav-backdrop";
-      backdrop.setAttribute("aria-label", "Close menu");
-      backdrop.setAttribute("tabindex", "-1");
-      nav.insertBefore(backdrop, nav.firstChild);
-    }
-
+    const closeDrawer = () => {
+      nav.classList.remove("is-open");
+      document.body.classList.remove("nav-open");
+      document.body.style.overflow = "";
+    };
+    const openDrawer = () => {
+      nav.classList.add("is-open");
+      document.body.classList.add("nav-open");
+      document.body.style.overflow = "hidden";
+    };
     if (toggle) {
-      const setNavOpen = (open) => {
-        nav.classList.toggle("is-open", open);
-        document.body.classList.toggle("is-nav-open", open);
-        toggle.setAttribute("aria-expanded", open ? "true" : "false");
-        toggle.setAttribute("aria-label", open ? "Close menu" : "Menu");
-        backdrop.setAttribute("tabindex", open ? "0" : "-1");
-      };
-      toggle.setAttribute("aria-expanded", "false");
-      toggle.addEventListener("click", (e) => {
-        e.stopPropagation();
-        setNavOpen(!nav.classList.contains("is-open"));
+      toggle.addEventListener("click", () => {
+        nav.classList.contains("is-open") ? closeDrawer() : openDrawer();
       });
-      backdrop.addEventListener("click", () => setNavOpen(false));
       nav.querySelectorAll(".nav-links a").forEach((a) => {
-        a.addEventListener("click", () => setNavOpen(false));
+        a.addEventListener("click", closeDrawer);
       });
+      backdrop.addEventListener("click", closeDrawer);
       document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && nav.classList.contains("is-open")) setNavOpen(false);
+        if (e.key === "Escape" && nav.classList.contains("is-open")) closeDrawer();
       });
-      window.addEventListener("resize", () => {
-        syncNavHeight();
-        if (window.innerWidth > 900 && nav.classList.contains("is-open")) setNavOpen(false);
-      }, { passive: true });
     }
 
     // active link based on current page
