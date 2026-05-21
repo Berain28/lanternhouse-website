@@ -145,9 +145,19 @@
   }
 
   /* ---------- nav scroll state ---------- */
+  function syncNavHeight() {
+    const nav = document.querySelector(".nav");
+    if (!nav) return;
+    document.documentElement.style.setProperty("--nav-h", `${nav.offsetHeight}px`);
+  }
+
   function initNav() {
     const nav = document.querySelector(".nav");
     if (!nav) return;
+
+    syncNavHeight();
+    window.addEventListener("resize", syncNavHeight, { passive: true });
+
     const onScroll = () => {
       nav.classList.toggle("is-scrolled", window.scrollY > 8);
     };
@@ -156,13 +166,40 @@
 
     // mobile toggle
     const toggle = nav.querySelector(".nav-toggle");
+    let backdrop = nav.querySelector(".nav-backdrop");
+    if (!backdrop) {
+      backdrop = document.createElement("button");
+      backdrop.type = "button";
+      backdrop.className = "nav-backdrop";
+      backdrop.setAttribute("aria-label", "Close menu");
+      backdrop.setAttribute("tabindex", "-1");
+      nav.insertBefore(backdrop, nav.firstChild);
+    }
+
     if (toggle) {
-      toggle.addEventListener("click", () => {
-        nav.classList.toggle("is-open");
+      const setNavOpen = (open) => {
+        nav.classList.toggle("is-open", open);
+        document.body.classList.toggle("is-nav-open", open);
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+        toggle.setAttribute("aria-label", open ? "Close menu" : "Menu");
+        backdrop.setAttribute("tabindex", open ? "0" : "-1");
+      };
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.addEventListener("click", (e) => {
+        e.stopPropagation();
+        setNavOpen(!nav.classList.contains("is-open"));
       });
+      backdrop.addEventListener("click", () => setNavOpen(false));
       nav.querySelectorAll(".nav-links a").forEach((a) => {
-        a.addEventListener("click", () => nav.classList.remove("is-open"));
+        a.addEventListener("click", () => setNavOpen(false));
       });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && nav.classList.contains("is-open")) setNavOpen(false);
+      });
+      window.addEventListener("resize", () => {
+        syncNavHeight();
+        if (window.innerWidth > 900 && nav.classList.contains("is-open")) setNavOpen(false);
+      }, { passive: true });
     }
 
     // active link based on current page
